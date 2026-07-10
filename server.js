@@ -358,7 +358,7 @@ const promptHunter = (room, hunter, isDay, nextPhaseCallback) => {
                 const winResult = checkWinCondition(room);
                 if (winResult) handleGameOver(room, winResult);
                 else nextPhaseCallback();
-            }, 3000);
+            }, 2000);
         }, 2000);
     } else {
         sendToPlayer(hunter.id, { type: 'SHOOT_PROMPT', msg: "你即將死亡！請問你要開槍帶走誰？(請輸入號碼)" });
@@ -443,14 +443,14 @@ const resolveDayVote = (room) => {
         
         const winResult = checkWinCondition(room);
         if (winResult) {
-            setTimeout(() => handleGameOver(room, winResult), 3000);
+            setTimeout(() => handleGameOver(room, winResult), 2000);
             return;
         }
 
         if (victim.role === ROLES.HUNTER) {
             setTimeout(() => {
                 promptHunter(room, victim, true, () => startLastWordsPhase(room, () => startNightCycle(room)));
-            }, 3000);
+            }, 2000);
             return;
         }
     } else { 
@@ -461,7 +461,7 @@ const resolveDayVote = (room) => {
         const winResult = checkWinCondition(room);
         if (winResult) handleGameOver(room, winResult);
         else startLastWordsPhase(room, () => startNightCycle(room));
-    }, 5000);
+    }, 2000);
 };
 
 const startVotingPhase = (room) => {
@@ -483,7 +483,7 @@ const startVotingPhase = (room) => {
                     resolveDayVote(room);
                 }
             }
-        }, Math.random() * 5000 + 1000);
+        }, Math.random() * 1000 + 500);
     });
 
     room.voteTimeout = setTimeout(() => resolveDayVote(room), 30000);
@@ -629,7 +629,7 @@ io.on('connection', (socket) => {
                         if (room.status === STATUS.DAY_ANNOUNCE) startLastWordsPhase(room, () => startSpeechPhase(room));
                         else startLastWordsPhase(room, () => startNightCycle(room));
                     }
-                }, 5000);
+                }, 2000);
             } else {
                 sendToPlayer(socket.id, { error: "你現在不能開槍！" });
             }
