@@ -108,12 +108,39 @@ const initGame = (room) => {
     setTimeout(() => startNightCycle(room), 3000);
 };
 
+const resolveWolfVote = (room) => {
+    if (room.status !== STATUS.NIGHT_WOLF) return;
+    if (room.wolfTimeout) clearTimeout(room.wolfTimeout);
+    
+    const humanWolves = room.players.filter(p => p.role === ROLES.WEREWOLF && p.isAlive && !p.isBot).map(p => p.seat);
+    const botWolves = room.players.filter(p => p.role === ROLES.WEREWOLF && p.isAlive && p.isBot).map(p => p.seat);
+    
+    const humanVotes = humanWolves.map(seat => room.wolfVotes[seat]).filter(v => v !== undefined);
+    const botVotes = botWolves.map(seat => room.wolfVotes[seat]).filter(v => v !== undefined);
+    
+    const validVotes = humanVotes.length > 0 ? humanVotes : botVotes;
+    
+    const voteCounts = {};
+    validVotes.forEach(target => { voteCounts[target] = (voteCounts[target] || 0) + 1; });
+    
+    let maxVotes = 0, maxTargets = [];
+    for (const [target, count] of Object.entries(voteCounts)) {
+        if (count > maxVotes) { maxVotes = count; maxTargets = [parseInt(target)]; }
+        else if (count === maxVotes) { maxTargets.push(parseInt(target)); }
+    }
+    if (maxTargets.length > 0) {
+        room.nightKilled = maxTargets[Math.floor(Math.random() * maxTargets.length)];
+    }
+    startSeerPhase(room);
+};
+
 const startNightCycle = (room) => {
+    room.dayCount = (room.dayCount || 0);
     room.nightKilled = null;
     room.nightPoisoned = null;
     room.wolfVotes = {};
 
-    const hasHumanWolf = room.players.some(p => p.role === ROLES.WEREWOLF && p.isAlive && !p.isBot);
+    const hasHumanWolf = room.players.filter(p => p.role === ROLES.WEREWOLF && p.isAlive && !p.isBot).length > 0;
     const phaseDuration = hasHumanWolf ? 30000 : 3000;
     room.phaseEndTime = Date.now() + phaseDuration;
 
@@ -132,33 +159,16 @@ const startNightCycle = (room) => {
                     if (id.startsWith('BOT_')) return;
                     io.to(id).emit('game_update', { message: `[WOLF] 機器人 ${bot.seat} 號投票擊殺 ${targetSeat} 號玩家`, state: room });
                 });
+                const aliveWolves = room.players.filter(p => p.role === ROLES.WEREWOLF && p.isAlive).length;
+                if (Object.keys(room.wolfVotes).length >= aliveWolves) {
+                    resolveWolfVote(room);
+                }
             }
         }, 1000);
     });
 
-    setTimeout(() => {
-        if (room.status !== STATUS.NIGHT_WOLF) return;
-        
-        const humanWolves = room.players.filter(p => p.role === ROLES.WEREWOLF && p.isAlive && !p.isBot).map(p => p.seat);
-        const botWolves = room.players.filter(p => p.role === ROLES.WEREWOLF && p.isAlive && p.isBot).map(p => p.seat);
-        
-        const humanVotes = humanWolves.map(seat => room.wolfVotes[seat]).filter(v => v !== undefined);
-        const botVotes = botWolves.map(seat => room.wolfVotes[seat]).filter(v => v !== undefined);
-        
-        const validVotes = humanVotes.length > 0 ? humanVotes : botVotes;
-        
-        const voteCounts = {};
-        validVotes.forEach(target => { voteCounts[target] = (voteCounts[target] || 0) + 1; });
-        
-        let maxVotes = 0, maxTargets = [];
-        for (const [target, count] of Object.entries(voteCounts)) {
-            if (count > maxVotes) { maxVotes = count; maxTargets = [parseInt(target)]; }
-            else if (count === maxVotes) { maxTargets.push(parseInt(target)); }
-        }
-        if (maxTargets.length > 0) {
-            room.nightKilled = maxTargets[Math.floor(Math.random() * maxTargets.length)];
-        }
-        startSeerPhase(room);
+    room.wolfTimeout = setTimeout(() => {
+        resolveWolfVote(room);
     }, phaseDuration);
 };
 
@@ -365,10 +375,6 @@ const startSpeechPhase = (room) => {
         if (room.status !== STATUS.DAY_SPEECH) return;
         const current = alivePlayers[speakerIdx];
         if (!current) return;
-        room.currentSpeaker = current.seat;
-        room.phaseEndTime = Date.now() + 45000;
-        broadcast(room, `現在輪到 ${current.seat} 號玩家 (${current.name}) 發言。(45秒)`);
-        
         if (current.isBot) {
             await new Promise(res => setTimeout(res, 2000));
             if (room.status === STATUS.DAY_SPEECH && room.currentSpeaker === current.seat) {
@@ -396,6 +402,57 @@ const startSpeechPhase = (room) => {
     runSpeechCycle();
 };
 
+const resolveDayVote = (room) => {
+    if (room.status !== STATUS.DAY_VOTE) return;
+    if (room.voteTimeout) clearTimeout(room.voteTimeout);
+
+    const voteCounts = {};
+    Object.values(room.votes).forEach(target => { voteCounts[target] = (voteCounts[target] || 0) + 1; });
+    
+    let maxVotes = 0, maxTargets = [];
+    for (const [target, count] of Object.entries(voteCounts)) {
+        if (count > maxVotes) { maxVotes = count; maxTargets = [parseInt(target)]; }
+        else if (count === maxVotes) { maxTargets.push(parseInt(target)); }
+    }
+    
+    let exiledSeat = null;
+    if (maxTargets.length === 1) {
+        exiledSeat = maxTargets[0];
+    } else if (maxTargets.length > 1) {
+        exiledSeat = maxTargets[Math.floor(Math.random() * maxTargets.length)];
+        broadcast(room, `最高票平手，隨機決定放逐 ${exiledSeat} 號玩家`);
+    }
+
+    if (exiledSeat) {
+        const victim = room.players.find(p => p.seat === exiledSeat);
+        victim.isAlive = false;
+        broadcast(room, `${exiledSeat} 號玩家 (${victim.name}) 被大家公投放逐了！`);
+        
+        room.lastWordsQueue = [victim.seat]; // 被放逐者有遺言
+        
+        const winResult = checkWinCondition(room);
+        if (winResult) {
+            setTimeout(() => handleGameOver(room, winResult), 3000);
+            return;
+        }
+
+        if (victim.role === ROLES.HUNTER) {
+            setTimeout(() => {
+                promptHunter(room, victim, true, () => startLastWordsPhase(room, () => startNightCycle(room)));
+            }, 3000);
+            return;
+        }
+    } else { 
+        broadcast(room, "大家猶豫不決，沒有人被放逐。"); 
+    }
+    
+    setTimeout(() => {
+        const winResult = checkWinCondition(room);
+        if (winResult) handleGameOver(room, winResult);
+        else startLastWordsPhase(room, () => startNightCycle(room));
+    }, 5000);
+};
+
 const startVotingPhase = (room) => {
     room.votes = {};
     room.phaseEndTime = Date.now() + 30000;
@@ -406,48 +463,19 @@ const startVotingPhase = (room) => {
             if (room.status !== STATUS.DAY_VOTE) return;
             const alive = room.players.filter(p => p.isAlive && p.seat !== bot.seat);
             if (alive.length > 0) {
-                const target = alive[Math.floor(Math.random() * alive.length)].seat;
-                room.votes[bot.seat] = target;
-                broadcast(room, `${bot.seat} 號玩家投票給了 ${target} 號`);
+                const targetSeat = alive[Math.floor(Math.random() * alive.length)].seat;
+                room.votes[bot.seat] = targetSeat;
+                broadcast(room, `機器人 ${bot.seat} 號投票給了 ${targetSeat} 號`);
+                
+                const aliveCount = room.players.filter(p => p.isAlive).length;
+                if (Object.keys(room.votes).length >= aliveCount) {
+                    resolveDayVote(room);
+                }
             }
-        }, Math.random() * 5000 + 2000);
+        }, Math.random() * 5000 + 1000);
     });
 
-    setTimeout(() => {
-        if (room.status !== STATUS.DAY_VOTE) return;
-        const counts = {};
-        Object.values(room.votes).forEach(v => counts[v] = (counts[v] || 0) + 1);
-        let maxVotes = 0, exiledSeat = null;
-        for (let seat in counts) { if (counts[seat] > maxVotes) { maxVotes = counts[seat]; exiledSeat = parseInt(seat); } }
-        if (exiledSeat) {
-            const victim = room.players.find(p => p.seat === exiledSeat);
-            victim.isAlive = false;
-            broadcast(room, `${exiledSeat} 號玩家 (${victim.name}) 被大家公投放逐了！`);
-            
-            room.lastWordsQueue = [victim.seat]; // 被放逐者有遺言
-            
-            const winResult = checkWinCondition(room);
-            if (winResult) {
-                setTimeout(() => handleGameOver(room, winResult), 3000);
-                return;
-            }
-
-            if (victim.role === ROLES.HUNTER) {
-                setTimeout(() => {
-                    promptHunter(room, victim, true, () => startLastWordsPhase(room, () => startNightCycle(room)));
-                }, 3000);
-                return;
-            }
-        } else { 
-            broadcast(room, "大家猶豫不決，沒有人被放逐。"); 
-        }
-        
-        setTimeout(() => {
-            const winResult = checkWinCondition(room);
-            if (winResult) handleGameOver(room, winResult);
-            else startLastWordsPhase(room, () => startNightCycle(room));
-        }, 5000);
-    }, 30000);
+    room.voteTimeout = setTimeout(() => resolveDayVote(room), 30000);
 };
 
 io.on('connection', (socket) => {
@@ -519,15 +547,15 @@ io.on('connection', (socket) => {
         if (!player || !player.isAlive) return;
         const { cmd, target } = data;
         if (cmd === 'kill' && room.status === STATUS.NIGHT_WOLF && player.role === ROLES.WEREWOLF) {
-            const targetSeat = parseInt(target);
-            const targetPlayer = room.players.find(p => p.seat === targetSeat && p.isAlive);
-            if (targetPlayer && targetPlayer.role !== ROLES.WEREWOLF) {
-                room.wolfVotes[player.seat] = targetSeat;
-                const wolfIds = room.players.filter(p => p.role === ROLES.WEREWOLF).map(p => p.id);
-                wolfIds.forEach(id => {
-                    if (!id.startsWith('BOT_')) io.to(id).emit('game_update', { message: `[WOLF] 玩家 ${player.name} 投票擊殺 ${targetSeat} 號`, state: room });
-                });
-            } else { sendToPlayer(socket.id, { error: "無效的目標。" }); }
+            room.wolfVotes[player.seat] = parseInt(target);
+            const wolfIds = room.players.filter(p => p.role === ROLES.WEREWOLF).map(p => p.id);
+            wolfIds.forEach(id => {
+                if (!id.startsWith('BOT_')) io.to(id).emit('game_update', { message: `[WOLF] ${player.name} 投票擊殺 ${target} 號玩家`, state: room });
+            });
+            const aliveWolves = room.players.filter(p => p.role === ROLES.WEREWOLF && p.isAlive).length;
+            if (Object.keys(room.wolfVotes).length >= aliveWolves) {
+                resolveWolfVote(room);
+            }
         } else if (cmd === 'check' && room.status === STATUS.NIGHT_SEER && player.role === ROLES.SEER) {
             const targetPlayer = room.players.find(p => p.seat === parseInt(target));
             sendToPlayer(socket.id, { msg: `查驗結果：${target} 號玩家的真實身分是 ${targetPlayer?.role === ROLES.WEREWOLF ? '狼人 🐺' : '好人 🧑'}` });
@@ -561,6 +589,11 @@ io.on('connection', (socket) => {
         } else if (cmd === 'vote' && room.status === STATUS.DAY_VOTE) {
             room.votes[player.seat] = parseInt(target);
             broadcast(room, `${player.seat} 號玩家投票給了 ${target} 號`);
+            
+            const aliveCount = room.players.filter(p => p.isAlive).length;
+            if (Object.keys(room.votes).length >= aliveCount) {
+                resolveDayVote(room);
+            }
         } else if (cmd === 'shoot' && player.role === ROLES.HUNTER) {
             if (room.hunterShootTimeout) {
                 clearTimeout(room.hunterShootTimeout);
