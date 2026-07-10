@@ -101,6 +101,11 @@ const startNightCycle = (room) => {
     room.nightKilled = null;
     room.nightPoisoned = null;
     room.wolfVotes = {};
+
+    const hasHumanWolf = room.players.some(p => p.role === ROLES.WEREWOLF && p.isAlive && !p.isBot);
+    const phaseDuration = hasHumanWolf ? 30000 : 3000;
+    room.phaseEndTime = Date.now() + phaseDuration;
+
     transitionTo(room, STATUS.NIGHT_WOLF, "天黑請閉眼。狼人請睜眼！");
 
     const botWolves = room.players.filter(p => p.role === ROLES.WEREWOLF && p.isAlive && p.isBot);
@@ -119,11 +124,6 @@ const startNightCycle = (room) => {
             }
         }, 1000);
     });
-
-    const hasHumanWolf = room.players.some(p => p.role === ROLES.WEREWOLF && p.isAlive && !p.isBot);
-    const phaseDuration = hasHumanWolf ? 30000 : 3000;
-    room.phaseEndTime = Date.now() + phaseDuration;
-    broadcast(room, "天黑請閉眼。狼人請睜眼！");
 
     setTimeout(() => {
         if (room.status !== STATUS.NIGHT_WOLF) return;
@@ -145,11 +145,11 @@ const startNightCycle = (room) => {
 };
 
 const startSeerPhase = (room) => {
-    transitionTo(room, STATUS.NIGHT_SEER, "預言家請睜眼，請選擇要查驗的玩家。");
     const hasHumanSeer = room.players.some(p => p.role === ROLES.SEER && p.isAlive && !p.isBot);
     const phaseDuration = hasHumanSeer ? 15000 : 3000;
     room.phaseEndTime = Date.now() + phaseDuration;
-    broadcast(room, "預言家請睜眼，請選擇要查驗的玩家。"); // 重新發送以更新 phaseEndTime
+    
+    transitionTo(room, STATUS.NIGHT_SEER, "預言家請睜眼，請選擇要查驗的玩家。");
 
     setTimeout(() => {
         if (room.status !== STATUS.NIGHT_SEER) return;
@@ -164,9 +164,14 @@ const promptWitchPoison = (room, witch) => {
 };
 
 const startWitchPhase = (room) => {
-    transitionTo(room, STATUS.NIGHT_WITCH, "女巫請睜眼。");
     room.witchUsedPotionThisNight = false;
     const witch = room.players.find(p => p.role === ROLES.WITCH && p.isAlive);
+    const hasHumanWitch = witch && !witch.isBot;
+    const phaseDuration = hasHumanWitch ? 20000 : 3000;
+    room.phaseEndTime = Date.now() + phaseDuration;
+
+    transitionTo(room, STATUS.NIGHT_WITCH, "女巫請睜眼。");
+
     if (witch) {
         if (witch.isBot) {
             setTimeout(() => {
@@ -191,10 +196,6 @@ const startWitchPhase = (room) => {
             }
         }
     }
-    const hasHumanWitch = witch && !witch.isBot;
-    const phaseDuration = hasHumanWitch ? 20000 : 3000;
-    room.phaseEndTime = Date.now() + phaseDuration;
-    broadcast(room, "女巫請睜眼。");
 
     setTimeout(() => {
         if (room.status !== STATUS.NIGHT_WITCH) return;
@@ -308,7 +309,6 @@ const startLastWordsPhase = (room, nextPhaseCallback) => {
 };
 
 const promptHunter = (room, hunter, isDay, nextPhaseCallback) => {
-    broadcast(room, `昨晚死去的竟然是獵人！他有 15 秒的時間可以開槍！`);
     room.phaseEndTime = Date.now() + 15000;
     broadcast(room, `昨晚死去的竟然是獵人！他有 15 秒的時間可以開槍！`);
     if (hunter.isBot) {
@@ -379,10 +379,9 @@ const startSpeechPhase = (room) => {
 };
 
 const startVotingPhase = (room) => {
-    transitionTo(room, STATUS.DAY_VOTE, "進入投票階段！請票出你心中的狼人！");
     room.votes = {};
     room.phaseEndTime = Date.now() + 30000;
-    broadcast(room, "進入投票階段！請票出你心中的狼人！");
+    transitionTo(room, STATUS.DAY_VOTE, "進入投票階段！請票出你心中的狼人！");
 
     room.players.filter(p => p.isAlive && p.isBot).forEach(bot => {
         setTimeout(() => {
