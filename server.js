@@ -48,7 +48,7 @@ const BOT_SPEECHES = [
 ];
 const getBotSpeech = () => BOT_SPEECHES[Math.floor(Math.random() * BOT_SPEECHES.length)];
 
-const getSafeState = (room) => {
+const getPlayerSpecificState = (room, playerId) => {
     const safeRoom = { ...room };
     delete safeRoom.wolfTimeout;
     delete safeRoom.seerTimeout;
@@ -56,11 +56,35 @@ const getSafeState = (room) => {
     delete safeRoom.voteTimeout;
     delete safeRoom.hunterShootTimeout;
     delete safeRoom.skipSpeech;
+
+    // Filter hidden information based on player's role and game status
+    if (safeRoom.status !== STATUS.GAMEOVER) {
+        delete safeRoom.nightKilled;
+        delete safeRoom.nightPoisoned;
+        delete safeRoom.wolfVotes;
+
+        const requestingPlayer = safeRoom.players.find(p => p.id === playerId);
+        const requestingRole = requestingPlayer ? requestingPlayer.role : null;
+
+        safeRoom.players = safeRoom.players.map(p => {
+            const isSelf = p.id === playerId;
+            const isWolfTeam = requestingRole === ROLES.WEREWOLF && p.role === ROLES.WEREWOLF;
+            
+            // Hide role if not self, not gameover, and not fellow wolf
+            if (!isSelf && !isWolfTeam) {
+                return { ...p, role: null };
+            }
+            return p;
+        });
+    }
+
     return safeRoom;
 };
 
 const broadcast = (room, msg) => {
-    io.to(room.roomId).emit('game_update', { message: msg, state: getSafeState(room) });
+    room.players.forEach(p => {
+        io.to(p.id).emit('game_update', { message: msg, state: getPlayerSpecificState(room, p.id) });
+    });
 };
 const sendToPlayer = (id, data) => io.to(id).emit('private_msg', data);
 
@@ -127,7 +151,7 @@ const resolveWolfVote = (room) => {
                 room.wolfVotes[p.seat] = randomTarget;
                 const msg = `[系統] 已為未投票的 ${p.seat} 號狼人隨機決定擊殺 ${randomTarget} 號玩家`;
                 aliveWolvesPlayers.forEach(wolf => {
-                    if (!wolf.isBot) io.to(wolf.id).emit('game_update', { message: msg, state: getSafeState(room) });
+                    if (!wolf.isBot) io.to(wolf.id).emit('game_update', { message: msg, state: getPlayerSpecificState(room, wolf.id) });
                 });
             }
         });
@@ -178,7 +202,7 @@ const startNightCycle = (room) => {
                 const wolfIds = room.players.filter(p => p.role === ROLES.WEREWOLF).map(p => p.id);
                 wolfIds.forEach(id => {
                     if (id.startsWith('BOT_')) return;
-                    io.to(id).emit('game_update', { message: `[WOLF] 機器人 ${bot.seat} 號投票擊殺 ${targetSeat} 號玩家`, state: getSafeState(room) });
+                    io.to(id).emit('game_update', { message: `[WOLF] 機器人 ${bot.seat} 號投票擊殺 ${targetSeat} 號玩家`, state: getPlayerSpecificState(room, id) });
                 });
                 const aliveWolves = room.players.filter(p => p.role === ROLES.WEREWOLF && p.isAlive).length;
                 if (Object.keys(room.wolfVotes).length >= aliveWolves) {
@@ -523,7 +547,7 @@ const startVotingPhase = (room) => {
 
 io.on('connection', (socket) => {
     socket.on('create_room', (name) => {
-        const roomId = Math.random().toString(36).substring(2, 6).toUpperCase();
+        const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
         rooms[roomId] = createRoomState(roomId);
         rooms[roomId].hostId = socket.id;
         socket.join(roomId);
@@ -591,7 +615,7 @@ io.on('connection', (socket) => {
             room.wolfVotes[player.seat] = parseInt(target);
             const wolfIds = room.players.filter(p => p.role === ROLES.WEREWOLF).map(p => p.id);
             wolfIds.forEach(id => {
-                if (!id.startsWith('BOT_')) io.to(id).emit('game_update', { message: `[WOLF] ${player.name} 投票擊殺 ${target} 號玩家`, state: getSafeState(room) });
+                if (!id.startsWith('BOT_')) io.to(id).emit('game_update', { message: `[WOLF] ${player.name} 投票擊殺 ${target} 號玩家`, state: getPlayerSpecificState(room, id) });
             });
             const aliveWolves = room.players.filter(p => p.role === ROLES.WEREWOLF && p.isAlive).length;
             if (Object.keys(room.wolfVotes).length >= aliveWolves) {
@@ -673,7 +697,7 @@ io.on('connection', (socket) => {
         if (room.status === STATUS.NIGHT_WOLF && player.role === ROLES.WEREWOLF && player.isAlive) {
             const wolfIds = room.players.filter(p => p.role === ROLES.WEREWOLF).map(p => p.id);
             wolfIds.forEach(id => {
-                if (!id.startsWith('BOT_')) io.to(id).emit('game_update', { message: `[WOLF] ${player.name}: ${msg}`, state: getSafeState(room) });
+                if (!id.startsWith('BOT_')) io.to(id).emit('game_update', { message: `[WOLF] ${player.name}: ${msg}`, state: getPlayerSpecificState(room, id) });
             });
         } else if ((room.status === STATUS.DAY_SPEECH || room.status === STATUS.DAY_LAST_WORDS) && room.currentSpeaker === player.seat) {
             const now = Date.now();
