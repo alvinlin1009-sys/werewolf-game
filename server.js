@@ -113,6 +113,22 @@ const resolveWolfVote = (room) => {
     if (room.wolfTimeout) clearTimeout(room.wolfTimeout);
     room.status = STATUS.RESOLVING_VOTE;
     
+    const aliveWolvesPlayers = room.players.filter(p => p.role === ROLES.WEREWOLF && p.isAlive);
+    const aliveTargets = room.players.filter(p => p.isAlive && p.role !== ROLES.WEREWOLF);
+    
+    if (aliveTargets.length > 0) {
+        aliveWolvesPlayers.forEach(p => {
+            if (room.wolfVotes[p.seat] === undefined) {
+                const randomTarget = aliveTargets[Math.floor(Math.random() * aliveTargets.length)].seat;
+                room.wolfVotes[p.seat] = randomTarget;
+                const msg = `[系統] 已為未投票的 ${p.seat} 號狼人隨機決定擊殺 ${randomTarget} 號玩家`;
+                aliveWolvesPlayers.forEach(wolf => {
+                    if (!wolf.isBot) io.to(wolf.id).emit('game_update', { message: msg, state: room });
+                });
+            }
+        });
+    }
+
     const humanWolves = room.players.filter(p => p.role === ROLES.WEREWOLF && p.isAlive && !p.isBot).map(p => p.seat);
     const botWolves = room.players.filter(p => p.role === ROLES.WEREWOLF && p.isAlive && p.isBot).map(p => p.seat);
     
@@ -416,6 +432,18 @@ const resolveDayVote = (room) => {
     if (room.status !== STATUS.DAY_VOTE) return;
     if (room.voteTimeout) clearTimeout(room.voteTimeout);
     room.status = 'RESOLVING_VOTE';
+
+    const alivePlayers = room.players.filter(p => p.isAlive);
+    alivePlayers.forEach(p => {
+        if (room.votes[p.seat] === undefined) {
+            const aliveTargets = alivePlayers.filter(target => target.seat !== p.seat);
+            if (aliveTargets.length > 0) {
+                const randomTarget = aliveTargets[Math.floor(Math.random() * aliveTargets.length)].seat;
+                room.votes[p.seat] = randomTarget;
+                broadcast(room, `[系統] 已為未投票的 ${p.seat} 號玩家隨機投票給了 ${randomTarget} 號`);
+            }
+        }
+    });
 
     const voteCounts = {};
     Object.values(room.votes).forEach(target => { voteCounts[target] = (voteCounts[target] || 0) + 1; });
