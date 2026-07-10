@@ -127,8 +127,18 @@ const startNightCycle = (room) => {
 
     setTimeout(() => {
         if (room.status !== STATUS.NIGHT_WOLF) return;
+        
+        const humanWolves = room.players.filter(p => p.role === ROLES.WEREWOLF && p.isAlive && !p.isBot).map(p => p.seat);
+        const botWolves = room.players.filter(p => p.role === ROLES.WEREWOLF && p.isAlive && p.isBot).map(p => p.seat);
+        
+        const humanVotes = humanWolves.map(seat => room.wolfVotes[seat]).filter(v => v !== undefined);
+        const botVotes = botWolves.map(seat => room.wolfVotes[seat]).filter(v => v !== undefined);
+        
+        const validVotes = humanVotes.length > 0 ? humanVotes : botVotes;
+        
         const voteCounts = {};
-        Object.values(room.wolfVotes).forEach(target => { voteCounts[target] = (voteCounts[target] || 0) + 1; });
+        validVotes.forEach(target => { voteCounts[target] = (voteCounts[target] || 0) + 1; });
+        
         let maxVotes = 0, maxTargets = [];
         for (const [target, count] of Object.entries(voteCounts)) {
             if (count > maxVotes) { maxVotes = count; maxTargets = [parseInt(target)]; }
@@ -136,9 +146,6 @@ const startNightCycle = (room) => {
         }
         if (maxTargets.length > 0) {
             room.nightKilled = maxTargets[Math.floor(Math.random() * maxTargets.length)];
-        } else {
-            const alive = room.players.filter(p => p.isAlive);
-            if (alive.length > 0) room.nightKilled = alive[Math.floor(Math.random() * alive.length)].seat;
         }
         startSeerPhase(room);
     }, phaseDuration);
