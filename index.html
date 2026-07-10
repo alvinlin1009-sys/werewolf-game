@@ -79,6 +79,12 @@
               transform: scale(1.05);
           }
 
+          #add-bot-btn {
+              background: var(--accent-gold);
+              color: #1a1a1a;
+              display: none;
+          }
+
           /* --- 遊戲主界面 --- */
           #main-game {
               display: none;
@@ -184,6 +190,16 @@
               <div id="control-panel">
                   <input type="text" id="action-input" placeholder="等待指令..." disabled>
                   <button id="send-btn">發送</button>
+                  <select id="role-selector" style="padding: 10px; border-radius: 8px; background: #3d3d3d; color: white; border: 1px solid #555; display: none;">
+                      <option value="RANDOM">🎲 隨機分配</option>
+                      <option value="WEREWOLF">🐺 狼人</option>
+                      <option value="SEER">👁️ 預言家</option>
+                      <option value="WITCH">🧪 女巫</option>
+                      <option value="HUNTER">🔫 獵人</option>
+                      <option value="VILLAGER">🧑 平民</option>
+                  </select>
+                  <button id="end-speech-btn" style="display: none; background: var(--accent-red); color: white;">結束發言</button>
+                  <button id="add-bot-btn">加人機</button>
               </div>
           </div>
       </div>
@@ -203,7 +219,10 @@
           const gameLog = document.getElementById('game-log');
           const actionInput = document.getElementById('action-input');
           const sendBtn = document.getElementById('send-btn');
+          const addBotBtn = document.getElementById('add-bot-btn');
+          const roleSelector = document.getElementById('role-selector');
           const roleBadge = document.getElementById('role-badge');
+          const endSpeechBtn = document.getElementById('end-speech-btn');
 
           let myName = "";
           let myRole = "";
@@ -240,6 +259,18 @@
           sendBtn.onclick = handleSend;
           actionInput.onkeypress = (e) => { if (e.key === 'Enter') handleSend(); };
 
+          addBotBtn.onclick = () => {
+              socket.emit('add_bot');
+          };
+
+          endSpeechBtn.onclick = () => {
+              socket.emit('end_speech');
+          };
+
+          roleSelector.onchange = (e) => {
+              socket.emit('force_role', e.target.value);
+          };
+
           // ==========================================
           // Socket 事件監聽
           // ==========================================
@@ -270,6 +301,8 @@
               }
           });
 
+          let countdownInterval = null;
+
           // --- UI 更新邏輯 ---
           function updateUI(message, state) {
               if (message) {
@@ -278,16 +311,32 @@
                   addLog(message, type);
               }
 
+              if (state.status === 'WAITING' && state.players.length < 9) {
+                  addBotBtn.style.display = 'block';
+                  roleSelector.style.display = 'block';
+              } else if (state.status === 'WAITING') {
+                  addBotBtn.style.display = 'none';
+                  roleSelector.style.display = 'block';
+              } else {
+                  addBotBtn.style.display = 'none';
+                  roleSelector.style.display = 'none';
+              }
+
+              if (countdownInterval) {
+                  clearInterval(countdownInterval);
+                  countdownInterval = null;
+              }
+
               // 根據狀態控制輸入框
               switch (state.status) {
                   case 'WAITING':
-                      statusBar.innerText = "等待遊戲開始...";
+                      statusBar.innerText = `等待遊戲開始... (${state.players.length}/9)`;
                       actionInput.disabled = true;
                       break;
                   case 'NIGHT_WOLF':
                       statusBar.innerText = "🌙 黑夜：狼人請睜眼";
                       actionInput.disabled = (myRole !== 'WEREWOLF');
-                      if (myRole === 'WEREWOLF') actionInput.placeholder = "輸入 kill [號碼]";
+                      if (myRole === 'WEREWOLF') actionInput.placeholder = "聊天，或輸入 kill [號碼] 投票殺人";
                       break;
                   case 'NIGHT_SEER':
                       statusBar.innerText = "🌙 黑夜：預言家請睜眼";
@@ -304,11 +353,28 @@
                       actionInput.disabled = true;
                       break;
                   case 'DAY_SPEECH':
-                      statusBar.innerText = "☀️ 白天：發言階段";
-                      // 伺服器會透過 SPEECH_UNLOCK 私訊解鎖，這裡預設禁用
-                      actionInput.disabled = true;
+                      const speakerPlayer = state.players.find(p => p.seat === state.currentSpeaker);
+                      const updateTimer = () => {
+                          if (!state.speechEndTime) return;
+                          const left = Math.max(0, Math.floor((state.speechEndTime - Date.now()) / 1000));
+                          statusBar.innerText = speakerPlayer ? `☀️ 白天：現在是 ${speakerPlayer.name} 發言... (${left}秒)` : "☀️ 白天：發言階段";
+                      };
+                      updateTimer();
+                      countdownInterval = setInterval(updateTimer, 1000);
+                      
+                      const me = state.players.find(p => p.name === myName);
+                      if (me && state.currentSpeaker === me.seat) {
+                          actionInput.disabled = false;
+                          actionInput.placeholder = "現在輪到你發言了...";
+                          endSpeechBtn.style.display = 'block';
+                      } else {
+                          actionInput.disabled = true;
+                          actionInput.placeholder = "等待指令...";
+                          endSpeechBtn.style.display = 'none';
+                      }
                       break;
                   case 'DAY_VOTE':
+                      endSpeechBtn.style.display = 'none';
                       statusBar.innerText = "☀️ 白天：投票階段";
                       actionInput.disabled = false;
                       actionInput.placeholder = "輸入 vote [號碼]";
