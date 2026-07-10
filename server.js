@@ -53,13 +53,24 @@ const broadcast = (room, msg) => {
 const sendToPlayer = (id, data) => io.to(id).emit('private_msg', data);
 
 const checkWinCondition = (room) => {
-    const alive = room.players.filter(p => p.isAlive);
-    const wolves = alive.filter(p => p.role === ROLES.WEREWOLF).length;
-    const gods = alive.filter(p => [ROLES.SEER, ROLES.WITCH, ROLES.HUNTER].includes(p.role)).length;
-    const villagers = alive.filter(p => p.role === ROLES.VILLAGER).length;
-    if (wolves === 0) return "GOOD_WIN";
-    if (gods === 0 || villagers === 0) return "WOLF_WIN";
+    const wolves = room.players.filter(p => p.role === ROLES.WEREWOLF && p.isAlive).length;
+    const goods = room.players.filter(p => p.role !== ROLES.WEREWOLF && p.isAlive).length;
+    if (wolves === 0) return { winner: 'GOOD_WIN', reason: '所有狼人已被消滅！' };
+    if (wolves >= goods) return { winner: 'WOLF_WIN', reason: '狼人存活數量大於或等於好人！' };
     return null;
+};
+
+const handleGameOver = (room, winResult) => {
+    let msg = `遊戲結束！${winResult.reason} 獲勝陣營：${winResult.winner === 'GOOD_WIN' ? '好人 🧑' : '狼人 🐺'}\n\n【玩家身分公布】\n`;
+    room.players.forEach(p => {
+        const roleName = p.role === ROLES.WEREWOLF ? '狼人 🐺' :
+                         p.role === ROLES.SEER ? '預言家 👁️' :
+                         p.role === ROLES.WITCH ? '女巫 🧪' :
+                         p.role === ROLES.HUNTER ? '獵人 🔫' : '平民 🧑';
+        msg += `${p.seat}號玩家 (${p.name}): ${roleName} ${p.isAlive ? '(存活)' : '(死亡)'}\n`;
+    });
+    room.phaseEndTime = null;
+    transitionTo(room, STATUS.GAMEOVER, msg);
 };
 
 const transitionTo = (room, newStatus, message) => {
@@ -246,9 +257,9 @@ const startDayPhase = (room) => {
     broadcast(room, deadThisNight.length > 0 ? `昨晚，${deadThisNight.join(' 和 ')} 慘遭殺害。` : "昨晚是個平安夜，沒有人死亡。");
     
     setTimeout(() => {
-        const winner = checkWinCondition(room);
-        if (winner) {
-            transitionTo(room, STATUS.GAMEOVER, `遊戲結束！獲勝陣營：${winner === 'GOOD_WIN' ? '好人' : '狼人'}`);
+        const winResult = checkWinCondition(room);
+        if (winResult) {
+            handleGameOver(room, winResult);
             return;
         }
 
@@ -329,8 +340,8 @@ const promptHunter = (room, hunter, isDay, nextPhaseCallback) => {
                 broadcast(room, `砰！獵人開槍帶走了 ${target} 號玩家！`);
             }
             setTimeout(() => {
-                const winner = checkWinCondition(room);
-                if (winner) transitionTo(room, STATUS.GAMEOVER, `遊戲結束！獲勝陣營：${winner === 'GOOD_WIN' ? '好人' : '狼人'}`);
+                const winResult = checkWinCondition(room);
+                if (winResult) handleGameOver(room, winResult);
                 else nextPhaseCallback();
             }, 3000);
         }, 2000);
@@ -339,8 +350,8 @@ const promptHunter = (room, hunter, isDay, nextPhaseCallback) => {
         room.hunterShootTimeout = setTimeout(() => {
             room.hunterShootTimeout = null;
             broadcast(room, "獵人猶豫不決，沒有開出那一槍。");
-            const winner = checkWinCondition(room);
-            if (winner) transitionTo(room, STATUS.GAMEOVER, `遊戲結束！獲勝陣營：${winner === 'GOOD_WIN' ? '好人' : '狼人'}`);
+            const winResult = checkWinCondition(room);
+            if (winResult) handleGameOver(room, winResult);
             else nextPhaseCallback();
         }, 15000);
     }
@@ -415,9 +426,9 @@ const startVotingPhase = (room) => {
             
             room.lastWordsQueue = [victim.seat]; // 被放逐者有遺言
             
-            const winner = checkWinCondition(room);
-            if (winner) {
-                setTimeout(() => transitionTo(room, STATUS.GAMEOVER, `遊戲結束！獲勝陣營：${winner === 'GOOD_WIN' ? '好人' : '狼人'}`), 3000);
+            const winResult = checkWinCondition(room);
+            if (winResult) {
+                setTimeout(() => handleGameOver(room, winResult), 3000);
                 return;
             }
 
@@ -432,8 +443,8 @@ const startVotingPhase = (room) => {
         }
         
         setTimeout(() => {
-            const winner = checkWinCondition(room);
-            if (winner) transitionTo(room, STATUS.GAMEOVER, `遊戲結束！獲勝陣營：${winner === 'GOOD_WIN' ? '好人' : '狼人'}`);
+            const winResult = checkWinCondition(room);
+            if (winResult) handleGameOver(room, winResult);
             else startLastWordsPhase(room, () => startNightCycle(room));
         }, 5000);
     }, 30000);
@@ -564,8 +575,8 @@ io.on('connection', (socket) => {
                     broadcast(room, `砰！獵人朝著天空盲目開了一槍，什麼都沒打中！`);
                 }
                 setTimeout(() => {
-                    const winner = checkWinCondition(room);
-                    if (winner) transitionTo(room, STATUS.GAMEOVER, `遊戲結束！獲勝陣營：${winner === 'GOOD_WIN' ? '好人' : '狼人'}`);
+                    const winResult = checkWinCondition(room);
+                    if (winResult) handleGameOver(room, winResult);
                     else {
                         if (room.status === STATUS.DAY_ANNOUNCE) startLastWordsPhase(room, () => startSpeechPhase(room));
                         else startLastWordsPhase(room, () => startNightCycle(room));
