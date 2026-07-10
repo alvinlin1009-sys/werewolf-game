@@ -179,7 +179,13 @@
           <div id="login-screen">
               <h1 style="color: var(--accent-red); font-size: 2.5rem;">🐺 狼人殺</h1>
               <input type="text" id="username" placeholder="輸入你的名字..." maxlength="10">
-              <button id="join-btn">加入遊戲</button>
+              <div style="display: flex; gap: 10px; margin-top: 10px; justify-content: center;">
+                  <button id="create-btn">建立房間</button>
+              </div>
+              <div style="display: flex; gap: 10px; margin-top: 20px; justify-content: center; align-items: center;">
+                  <input type="text" id="room-code" placeholder="房號..." maxlength="4" style="width: 100px;">
+                  <button id="join-btn" style="background: var(--accent-gold);">加入房間</button>
+              </div>
           </div>
 
           <!-- 遊戲主界面 -->
@@ -214,7 +220,9 @@
           const loginScreen = document.getElementById('login-screen');
           const mainGame = document.getElementById('main-game');
           const usernameInput = document.getElementById('username');
+          const createBtn = document.getElementById('create-btn');
           const joinBtn = document.getElementById('join-btn');
+          const roomCodeInput = document.getElementById('room-code');
           const statusBar = document.getElementById('status-bar');
           const gameLog = document.getElementById('game-log');
           const actionInput = document.getElementById('action-input');
@@ -228,13 +236,18 @@
           let myRole = "";
 
           // --- 登入邏輯 ---
-          joinBtn.onclick = () => {
+          createBtn.onclick = () => {
               myName = usernameInput.value.trim();
               if (!myName) return alert("請輸入名字！");
+              socket.emit('create_room', myName);
+          };
 
-              socket.emit('join_game', myName);
-              loginScreen.classList.add('hidden');
-              mainGame.style.display = 'flex';
+          joinBtn.onclick = () => {
+              myName = usernameInput.value.trim();
+              const roomId = roomCodeInput.value.trim().toUpperCase();
+              if (!myName) return alert("請輸入名字！");
+              if (!roomId) return alert("請輸入房號！");
+              socket.emit('join_room', { name: myName, roomId });
           };
 
           // --- 發送邏輯 ---
@@ -242,14 +255,17 @@
               const val = actionInput.value.trim();
               if (!val) return;
 
-              // 判斷是聊天訊息還是遊戲指令 (指令通常以 kill, check, vote, shoot 開頭)
-              const commandMatch = val.match(/^(kill|check|vote|shoot|witch_action)\s+(.*)/);
+              // 判斷是聊天訊息還是遊戲指令
+              const commandMatch = val.match(/^(kill|check|vote|shoot|save|poison)\s+(.*)/i);
 
               if (commandMatch) {
                   socket.emit('game_action', {
-                      cmd: commandMatch[1],
+                      cmd: commandMatch[1].toLowerCase(),
                       target: commandMatch[2]
                   });
+                  actionInput.value = "";
+                  actionInput.disabled = true;
+                  actionInput.placeholder = "已送出指令，等待中...";
               } else {
                   socket.emit('chat_message', val);
               }
@@ -276,6 +292,8 @@
           // ==========================================
 
           socket.on('game_update', ({ message, state }) => {
+              loginScreen.classList.add('hidden');
+              mainGame.style.display = 'flex';
               updateUI(message, state);
           });
 
@@ -288,7 +306,7 @@
               } else if (data.type === 'WITCH_PROMPT') {
                   addLog(`[女巫提示] ${data.msg}`, 'log-private');
                   actionInput.disabled = false;
-                  actionInput.placeholder = "輸入指令 (例如: witch_action SAVE 1)";
+                  actionInput.placeholder = "輸入指令 (例如: save 1 或 poison 3)";
               } else if (data.type === 'SHOOT_PROMPT') {
                   addLog(`[獵人提示] 選擇要射擊的玩家號碼！`, 'log-private');
                   actionInput.disabled = false;
@@ -296,6 +314,9 @@
               } else if (data.type === 'SPEECH_UNLOCK') {
                   actionInput.disabled = false;
                   actionInput.placeholder = "現在輪到你發言了...";
+              } else if (data.type === 'LAST_WORDS_UNLOCK') {
+                  actionInput.disabled = false;
+                  actionInput.placeholder = "現在輪到你發表遺言了...";
               } else {
                   addLog(`[私訊] ${data.msg || data}`, 'log-private');
               }
@@ -307,7 +328,7 @@
           function updateUI(message, state) {
               if (message) {
                   const type = message.includes('[WOLF]') ? 'log-wolf' :
-                               (message.includes('SPOILER') || message.includes('Wait') ? 'log-system' : 'log-chat');
+                               (message.includes('[🗣️ 發言]') || message.includes('[👻 遺言]') ? 'log-chat' : 'log-system');
                   addLog(message, type);
               }
 
@@ -322,6 +343,18 @@
                   roleSelector.style.display = 'none';
               }
 
+              let mySeat = null;
+              if (state && state.players) {
+                  const me = state.players.find(p => p.name === myName);
+                  if (me) mySeat = me.seat;
+              }
+
+              if ((state.status === 'DAY_SPEECH' || state.status === 'DAY_LAST_WORDS') && state.currentSpeaker === mySeat) {
+                  endSpeechBtn.style.display = 'block';
+              } else {
+                  endSpeechBtn.style.display = 'none';
+              }
+
               if (countdownInterval) {
                   clearInterval(countdownInterval);
                   countdownInterval = null;
@@ -330,7 +363,7 @@
               // 根據狀態控制輸入框
               switch (state.status) {
                   case 'WAITING':
-                      statusBar.innerText = `等待遊戲開始... (${state.players.length}/9)`;
+                      statusBar.innerText = `房間：${state.roomId} | 等待玩家... (${state.players.length}/9)`;
                       actionInput.disabled = true;
                       break;
                   case 'NIGHT_WOLF':
@@ -349,40 +382,37 @@
                       if (myRole === 'WITCH') actionInput.placeholder = "輸入 witch_action SAVE/POISON [號碼]";
                       break;
                   case 'DAY_ANNOUNCE':
-                      statusBar.innerText = "☀️ 白天：公布死訊";
+                      statusBar.innerText = `房間：${state.roomId} | ☀️ 白天：昨晚結算`;
                       actionInput.disabled = true;
                       break;
+                  case 'DAY_LAST_WORDS':
+                      statusBar.innerText = `房間：${state.roomId} | 👻 遺言階段：等待 ${state.currentSpeaker} 號玩家發言`;
+                      if (state.currentSpeaker !== mySeat) actionInput.disabled = true;
+                      break;
                   case 'DAY_SPEECH':
-                      const speakerPlayer = state.players.find(p => p.seat === state.currentSpeaker);
-                      const updateTimer = () => {
-                          if (!state.speechEndTime) return;
-                          const left = Math.max(0, Math.floor((state.speechEndTime - Date.now()) / 1000));
-                          statusBar.innerText = speakerPlayer ? `☀️ 白天：現在是 ${speakerPlayer.name} 發言... (${left}秒)` : "☀️ 白天：發言階段";
-                      };
-                      updateTimer();
-                      countdownInterval = setInterval(updateTimer, 1000);
-                      
-                      const me = state.players.find(p => p.name === myName);
-                      if (me && state.currentSpeaker === me.seat) {
-                          actionInput.disabled = false;
-                          actionInput.placeholder = "現在輪到你發言了...";
-                          endSpeechBtn.style.display = 'block';
-                      } else {
-                          actionInput.disabled = true;
-                          actionInput.placeholder = "等待指令...";
-                          endSpeechBtn.style.display = 'none';
-                      }
+                      statusBar.innerText = `房間：${state.roomId} | 🗣️ 白天：等待 ${state.currentSpeaker} 號玩家發言`;
+                      if (state.currentSpeaker !== mySeat) actionInput.disabled = true;
                       break;
                   case 'DAY_VOTE':
-                      endSpeechBtn.style.display = 'none';
-                      statusBar.innerText = "☀️ 白天：投票階段";
+                      statusBar.innerText = `房間：${state.roomId} | 🗳️ 白天：投票階段`;
                       actionInput.disabled = false;
                       actionInput.placeholder = "輸入 vote [號碼]";
                       break;
                   case 'GAMEOVER':
-                      statusBar.innerText = "🎮 遊戲結束";
+                      statusBar.innerText = `房間：${state.roomId} | 🏁 遊戲結束`;
                       actionInput.disabled = true;
                       break;
+              }
+
+              // 通用倒數計時處理
+              if (state.phaseEndTime) {
+                  const baseText = statusBar.innerText;
+                  const updateTimer = () => {
+                      const left = Math.max(0, Math.floor((state.phaseEndTime - Date.now()) / 1000));
+                      statusBar.innerText = `${baseText} (${left}s)`;
+                  };
+                  countdownInterval = setInterval(updateTimer, 1000);
+                  updateTimer();
               }
           }
 
