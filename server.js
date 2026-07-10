@@ -594,8 +594,9 @@ io.on('connection', (socket) => {
         const room = rooms[socket.roomId];
         if (!room) return;
         const player = room.players.find(p => p.id === socket.id);
-        if (!player || !player.isAlive) return;
+        if (!player) return;
         const { cmd, target } = data;
+        if (!player.isAlive && cmd !== 'shoot') return;
         
         if (cmd === 'kill') {
             if (room.status !== STATUS.NIGHT_WOLF || player.role !== ROLES.WEREWOLF) return sendToPlayer(socket.id, { error: "現在不是狼人殺人階段！" });
