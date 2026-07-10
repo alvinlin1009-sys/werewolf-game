@@ -323,7 +323,7 @@
                   addLog(message, type);
               }
 
-              if (state.status === 'WAITING' && state.players.length < 9) {
+              if (state.status === 'WAITING' && state.players.length < 9 && socket.id === state.hostId) {
                   addBotBtn.style.display = 'block';
               } else {
                   addBotBtn.style.display = 'none';
@@ -351,7 +351,6 @@
                   case 'WAITING':
                       statusBar.innerText = `房間：${state.roomId} | 等待玩家... (${state.players.length}/9)`;
                       actionInput.disabled = true;
-                      addBotBtn.style.display = 'block';
                       break;
                   case 'NIGHT_WOLF':
                       statusBar.innerText = "🌙 黑夜：狼人請睜眼";

@@ -35,7 +35,9 @@ const createRoomState = (roomId) => ({
     nightPoisoned: null,
     skipSpeech: null,
     hunterShootTimeout: null,
-    votes: {}
+    hunterShootTimeout: null,
+    votes: {},
+    hostId: null
 });
 
 const BOT_SPEECHES = [
@@ -523,6 +525,7 @@ io.on('connection', (socket) => {
     socket.on('create_room', (name) => {
         const roomId = Math.random().toString(36).substring(2, 6).toUpperCase();
         rooms[roomId] = createRoomState(roomId);
+        rooms[roomId].hostId = socket.id;
         socket.join(roomId);
         socket.roomId = roomId;
         const room = rooms[roomId];
@@ -553,6 +556,7 @@ io.on('connection', (socket) => {
     socket.on('add_bot', () => {
         const room = rooms[socket.roomId];
         if (!room || room.status !== STATUS.WAITING || room.players.length >= 9) return;
+        if (room.hostId !== socket.id) return sendToPlayer(socket.id, { error: "只有房主才能加人機！" });
         const seat = room.players.length + 1;
         const name = `機器人 ${seat} 號`;
         room.players.push({ id: `BOT_${seat}_${Date.now()}`, seat, name, role: null, isAlive: true, isBot: true });
