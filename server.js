@@ -31,7 +31,6 @@ const createRoomState = (roomId) => ({
     witchHasPoison: true,
     phaseEndTime: null,
     wolfVotes: {},
-    forcedRoles: {},
     nightKilled: null,
     nightPoisoned: null,
     skipSpeech: null,
@@ -91,22 +90,15 @@ const transitionTo = (room, newStatus, message) => {
 };
 
 const assignRoles = (room) => {
-    const baseRoles = [
+    let baseRoles = [
         ROLES.WEREWOLF, ROLES.WEREWOLF, ROLES.WEREWOLF,
         ROLES.SEER, ROLES.WITCH, ROLES.HUNTER,
         ROLES.VILLAGER, ROLES.VILLAGER, ROLES.VILLAGER
     ];
-    room.players.forEach(p => {
-        if (room.forcedRoles[p.id]) {
-            const roleIndex = baseRoles.indexOf(room.forcedRoles[p.id]);
-            if (roleIndex !== -1) {
-                p.role = baseRoles.splice(roleIndex, 1)[0];
-            }
-        }
-    });
-    const remainingRoles = [...baseRoles].sort(() => Math.random() - 0.5);
-    room.players.forEach(p => {
-        if (!p.role) p.role = remainingRoles.pop();
+    baseRoles = baseRoles.sort(() => Math.random() - 0.5);
+
+    room.players.forEach((p, idx) => {
+        p.role = baseRoles[idx];
         sendToPlayer(p.id, { type: 'ROLE_ASSIGN', role: p.role });
     });
 };
@@ -114,7 +106,6 @@ const assignRoles = (room) => {
 const initGame = (room) => {
     room.status = STATUS.NIGHT_WOLF;
     assignRoles(room);
-    room.forcedRoles = {};
     broadcast(room, "遊戲開始！身分已分配完畢。");
     setTimeout(() => startNightCycle(room), 3000);
 };
@@ -572,14 +563,7 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('force_role', (role) => {
-        const room = rooms[socket.roomId];
-        if (room && room.status === STATUS.WAITING) {
-            if (role === 'RANDOM') delete room.forcedRoles[socket.id];
-            else room.forcedRoles[socket.id] = role;
-            sendToPlayer(socket.id, { msg: `系統提示：你已將自己的身分指定為 ${role === 'RANDOM' ? '隨機' : role}` });
-        }
-    });
+
 
     socket.on('end_speech', () => {
         const room = rooms[socket.roomId];

@@ -196,14 +196,7 @@
               <div id="control-panel">
                   <input type="text" id="action-input" placeholder="等待指令..." disabled>
                   <button id="send-btn">發送</button>
-                  <select id="role-selector" style="padding: 10px; border-radius: 8px; background: #3d3d3d; color: white; border: 1px solid #555; display: none;">
-                      <option value="RANDOM">🎲 隨機分配</option>
-                      <option value="WEREWOLF">🐺 狼人</option>
-                      <option value="SEER">👁️ 預言家</option>
-                      <option value="WITCH">🧪 女巫</option>
-                      <option value="HUNTER">🔫 獵人</option>
-                      <option value="VILLAGER">🧑 平民</option>
-                  </select>
+
                   <button id="end-speech-btn" style="display: none; background: var(--accent-red); color: white;">結束發言</button>
                   <button id="add-bot-btn">加人機</button>
               </div>
@@ -283,9 +276,7 @@
               socket.emit('end_speech');
           };
 
-          roleSelector.onchange = (e) => {
-              socket.emit('force_role', e.target.value);
-          };
+
 
           // ==========================================
           // Socket 事件監聽
@@ -334,13 +325,8 @@
 
               if (state.status === 'WAITING' && state.players.length < 9) {
                   addBotBtn.style.display = 'block';
-                  roleSelector.style.display = 'block';
-              } else if (state.status === 'WAITING') {
-                  addBotBtn.style.display = 'none';
-                  roleSelector.style.display = 'block';
               } else {
                   addBotBtn.style.display = 'none';
-                  roleSelector.style.display = 'none';
               }
 
               let mySeat = null;
@@ -365,6 +351,7 @@
                   case 'WAITING':
                       statusBar.innerText = `房間：${state.roomId} | 等待玩家... (${state.players.length}/9)`;
                       actionInput.disabled = true;
+                      addBotBtn.style.display = 'block';
                       break;
                   case 'NIGHT_WOLF':
                       statusBar.innerText = "🌙 黑夜：狼人請睜眼";
