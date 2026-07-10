@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="utf-8">
+    <title>狼人殺線上版 - Final Project</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/reset.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/theme/black.min.css" id="theme">
+    <style>
+        .reveal h1, .reveal h2, .reveal h3 {
+            text-transform: none;
+            font-family: 'Microsoft JhengHei', sans-serif;
+        }
+        .reveal p, .reveal li {
+            font-family: 'Microsoft JhengHei', sans-serif;
+            text-align: left;
+        }
+        .highlight { color: #e74c3c; font-weight: bold; }
+        .success { color: #2ecc71; font-weight: bold; }
+        .table-container { font-size: 0.7em; }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+
+            <!-- 封面 -->
+            <section>
+                <h1 style="color: #e74c3c;">🐺 狼人殺線上版</h1>
+                <h3>Werewolf Game Online</h3>
+                <p style="text-align: center; margin-top: 50px;">Final Project 成果發表</p>
+                <p style="text-align: center; font-size: 0.6em; color: #888;">使用方向鍵 (→) 切換下一頁</p>
+            </section>
+
+            <!-- 大綱 -->
+            <section>
+                <h2>📝 報告大綱</h2>
+                <ul>
+                    <li>1. 專案動機 (Motivation)</li>
+                    <li>2. 設計與架構 (Design & Architecture)</li>
+                    <li>3. 競品分析 (Similar Products Analyze)</li>
+                    <li>4. 成果展示 (Screenshots)</li>
+                    <li>5. 資安報告 (Security Report)</li>
+                    <li>6. 心得與反思 (Reflections)</li>
+                </ul>
+            </section>
+
+            <!-- 1. 動機 -->
+            <section>
+                <section>
+                    <h2>1. 專案動機</h2>
+                    <p>為什麼選擇開發狼人殺？</p>
+                    <ul>
+                        <li><span class="highlight">經典派對遊戲：</span>極具互動性與邏輯推理，深受大眾喜愛。</li>
+                        <li><span class="highlight">技術挑戰：</span>極佳的「即時通訊 (WebSockets)」與「狀態機 (FSM)」練習題材。</li>
+                        <li><span class="highlight">解決痛點：</span>平常湊不齊人，或需下載肥大的 APP。我們希望能打造一個<b>免安裝、隨開即玩</b>，且支援 <b>AI 人機湊數</b> 的輕量化網頁版狼人殺。</li>
+                    </ul>
+                </section>
+            </section>
+
+            <!-- 2. 設計與架構 -->
+            <section>
+                <section>
+                    <h2>2. 設計與架構</h2>
+                    <h3>技術棧 (Tech Stack)</h3>
+                    <ul>
+                        <li><b>前端 (Frontend):</b> HTML, Vanilla CSS, JS (極致輕量化)</li>
+                        <li><b>後端 (Backend):</b> Node.js, Express</li>
+                        <li><b>通訊協定:</b> Socket.io (WebSocket 即時雙向通訊)</li>
+                    </ul>
+                </section>
+                <section>
+                    <h2>系統架構</h2>
+                    <ul>
+                        <li><b>事件驅動 (Event-Driven):</b> 前後端完全依賴 Socket 事件進行溝通。</li>
+                        <li><b>有限狀態機 (FSM):</b> 伺服器端維護嚴謹的遊戲狀態轉換。<br>
+                            <span style="font-size:0.6em; color:#ccc;">WAITING ➔ NIGHT_WOLF ➔ NIGHT_SEER ➔ NIGHT_WITCH ➔ DAY_ANNOUNCE ➔ DAY_SPEECH ➔ DAY_VOTE</span>
+                        </li>
+                        <li><b>AI 機器人系統:</b> 內建會隨機發言、隨機投票的 AI，解決玩家人數不足的問題。</li>
+                    </ul>
+                </section>
+            </section>
+
+            <!-- 3. 競品分析 -->
+            <section>
+                <h2>3. 競品分析</h2>
+                <div class="table-container">
+                    <table style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>比較項目</th>
+                                <th>市面狼人殺 APP</th>
+                                <th><span class="success">我們的線上版</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><b>遊玩門檻</b></td>
+                                <td>高 (需下載 APP、註冊帳號)</td>
+                                <td><b>極低</b> (瀏覽器打開、輸入暱稱即玩)</td>
+                            </tr>
+                            <tr>
+                                <td><b>人數限制</b></td>
+                                <td>必須湊滿 9 人或 12 人</td>
+                                <td><b>彈性</b> (支援 AI 機器人隨時補位)</td>
+                            </tr>
+                            <tr>
+                                <td><b>伺服器負載</b></td>
+                                <td>需龐大伺服器運算 3D/語音</td>
+                                <td><b>輕量化</b> (純文字指令，極低延遲)</td>
+                            </tr>
+                            <tr>
+                                <td><b>擴充性</b></td>
+                                <td>規則綁死，無法輕易修改</td>
+                                <td><b>開源專案</b>，隨時依喜好擴充角色</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 4. 成果展示 -->
+            <section>
+                <h2>4. 成果展示</h2>
+                <p style="text-align: center; color: #888; font-size: 0.8em;">(您可以在此頁面展示您的遊戲實際截圖與操作)</p>
+                <ul>
+                    <li>✅ <b>登入畫面</b>：房主建立房間與一般玩家加入</li>
+                    <li>✅ <b>遊戲大廳</b>：房主專屬「加人機」權限</li>
+                    <li>✅ <b>夜晚行動</b>：暗黑模式與身分專屬指令</li>
+                    <li>✅ <b>白天發言</b>：即時聊天室與發言倒數系統</li>
+                </ul>
+            </section>
+
+            <!-- 5. 資安報告 -->
+            <section>
+                <section>
+                    <h2>5. 資安報告 <span style="font-size: 0.5em;">(Security Report)</span></h2>
+                    <p>在開發中，我們主動發現並修復了兩大資安漏洞：</p>
+                </section>
+                <section>
+                    <h3>A. 全圖透視外掛 (Information Leakage)</h3>
+                    <p style="font-size: 0.8em;">
+                        <b>⚠️ 成因：</b>原先伺服器廣播時，會將所有人的真實身分一次發給全體玩家，懂技術的人可透過 F12 攔截封包作弊。<br><br>
+                        <b>🛡️ 解決方案：</b>實作<span class="success">「視角過濾器 (Perspective Filter)」</span>。在伺服器端針對每位玩家的 Socket 獨立處理，將非己方陣營的身分強制覆蓋為 Null，並過濾掉夜晚行動資訊，從根本阻絕開圖外掛。
+                    </p>
+                </section>
+                <section>
+                    <h3>B. 房號暴力破解 (Brute-force)</h3>
+                    <p style="font-size: 0.8em;">
+                        <b>⚠️ 成因：</b>原房號僅 4 碼英數字，惡意腳本可輕易遍歷所有組合並塞滿幽靈玩家干擾遊戲。<br><br>
+                        <b>🛡️ 解決方案：</b>將房號長度提升至 6 碼，組合數從 167 萬暴增至 <span class="success">21.7 億種</span>，大幅提高爆破與亂入難度。
+                    </p>
+                </section>
+            </section>
+
+            <!-- 6. 心得與反思 -->
+            <section>
+                <h2>6. 心得與反思</h2>
+                <ul style="font-size: 0.8em;">
+                    <li style="margin-bottom: 15px;"><b>狀態同步的挑戰：</b>開發中最困難的是確保所有客戶端的畫面與伺服器狀態保持一致。曾經因為計時器的非同步特性引發伺服器錯誤，這讓我學到了深層複製與伺服器狀態淨化的重要性。</li>
+                    <li style="margin-bottom: 15px;"><b>資安意識的提升：</b><span class="highlight">「前端的資料永遠不可信」</span>。這次實作視角過濾器讓我深刻體會到，任何涉及遊戲公平性的判斷與資料過濾，都必須在「後端」嚴格把關。</li>
+                    <li><b>未來展望：</b>目前系統已有良好的基石，未來有機會可以加入 JWT 玩家認證機制 (解決斷線重連問題)、WebRTC 語音功能，以及更多樣化的神職角色。</li>
+                </ul>
+            </section>
+
+            <!-- 結尾 -->
+            <section>
+                <h2>Q & A</h2>
+                <h3 style="color: #e74c3c;">Thank You!</h3>
+            </section>
+
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/reveal.min.js"></script>
+    <script>
+        Reveal.initialize({
+            hash: true,
+            transition: 'slide', // none/fade/slide/convex/concave/zoom
+            center: true
+        });
+    </script>
+</body>
+</html>
