@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="utf-8">
+    <title>狼人殺線上版 - Final Project 成果報告書</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #c0392b;
+            --dark: #1a1a2e;
+            --card-bg: #ffffff;
+            --text: #2c3e50;
+            --subtext: #5d6d7e;
+            --border: #e8ecef;
+            --accent: #e74c3c;
+            --success: #27ae60;
+            --warning: #e67e22;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+            background: #f4f6f9;
+            color: var(--text);
+            line-height: 1.8;
+        }
+
+        /* ---- 封面 ---- */
+        .cover {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 60px 40px;
+            position: relative;
+            overflow: hidden;
+        }
+        .cover::before {
+            content: '🐺';
+            position: absolute;
+            font-size: 400px;
+            opacity: 0.04;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+        .cover-badge {
+            background: rgba(192, 57, 43, 0.3);
+            border: 1px solid rgba(231, 76, 60, 0.5);
+            padding: 6px 20px;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            letter-spacing: 2px;
+            margin-bottom: 30px;
+            color: #e74c3c;
+        }
+        .cover h1 {
+            font-size: 3.5rem;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 12px;
+            background: linear-gradient(90deg, #ffffff, #e74c3c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .cover h2 {
+            font-size: 1.4rem;
+            font-weight: 400;
+            color: rgba(255,255,255,0.6);
+            margin-bottom: 50px;
+        }
+        .cover-meta {
+            display: flex;
+            gap: 40px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .cover-meta-item {
+            text-align: center;
+        }
+        .cover-meta-item .label {
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.4);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .cover-meta-item .value {
+            font-size: 1rem;
+            color: rgba(255,255,255,0.85);
+            font-weight: 500;
+        }
+        .cover-toc {
+            margin-top: 60px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            max-width: 700px;
+        }
+        .cover-toc-item {
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 14px 16px;
+            font-size: 0.82rem;
+            color: rgba(255,255,255,0.75);
+        }
+        .cover-toc-item span {
+            display: block;
+            font-size: 1.3rem;
+            margin-bottom: 4px;
+        }
+
+        /* ---- 章節通用 ---- */
+        .section {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 80px 40px;
+        }
+        .section-header {
+            margin-bottom: 40px;
+            border-left: 5px solid var(--accent);
+            padding-left: 20px;
+        }
+        .section-header .num {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 4px;
+        }
+        .section-header h2 {
+            font-size: 2rem;
+            font-weight: 900;
+            color: var(--dark);
+        }
+        .section-header p {
+            color: var(--subtext);
+            margin-top: 8px;
+            font-size: 0.95rem;
+        }
+
+        /* ---- 分隔線 ---- */
+        .divider {
+            height: 1px;
+            background: var(--border);
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .dark-section {
+            background: var(--dark);
+            color: white;
+        }
+        .dark-section .section-header h2 { color: white; }
+        .dark-section .section-header p { color: rgba(255,255,255,0.5); }
+
+        /* ---- Card ---- */
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.06);
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+        }
+        .card h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--dark);
+        }
+        .card p, .card li { color: var(--subtext); font-size: 0.95rem; }
+        .card ul { padding-left: 20px; }
+        .card li { margin-bottom: 6px; }
+
+        /* ---- Motivation Grid ---- */
+        .motivation-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+        .motivation-card {
+            background: white;
+            border-radius: 16px;
+            padding: 28px 24px;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.06);
+            border: 1px solid var(--border);
+            border-top: 4px solid var(--accent);
+        }
+        .motivation-card .icon { font-size: 2rem; margin-bottom: 12px; }
+        .motivation-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
+        .motivation-card p { font-size: 0.88rem; color: var(--subtext); }
+
+        /* ---- Tech Stack ---- */
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 30px;
+        }
+        .tech-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+            border: 1px solid var(--border);
+        }
+        .tech-card .tech-icon { font-size: 2.2rem; margin-bottom: 8px; }
+        .tech-card .tech-name { font-weight: 700; font-size: 0.9rem; }
+        .tech-card .tech-desc { font-size: 0.78rem; color: var(--subtext); margin-top: 4px; }
+
+        /* ---- FSM ---- */
+        .fsm {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            flex-wrap: wrap;
+            margin: 20px 0;
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--border);
+        }
+        .fsm-state {
+            background: white;
+            border: 2px solid var(--accent);
+            border-radius: 8px;
+            padding: 8px 14px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--accent);
+            white-space: nowrap;
+        }
+        .fsm-arrow {
+            padding: 0 6px;
+            color: #aaa;
+            font-size: 1.2rem;
+        }
+
+        /* ---- Table ---- */
+        .compare-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        .compare-table th {
+            background: var(--dark);
+            color: white;
+            padding: 14px 18px;
+            text-align: left;
+        }
+        .compare-table th:first-child { border-radius: 10px 0 0 0; }
+        .compare-table th:last-child { border-radius: 0 10px 0 0; background: #27ae60; }
+        .compare-table td {
+            padding: 13px 18px;
+            border-bottom: 1px solid var(--border);
+            color: var(--subtext);
+        }
+        .compare-table td:last-child { font-weight: 600; color: var(--success); }
+        .compare-table tr:nth-child(even) td { background: #f8f9fa; }
+
+        /* ---- Security ---- */
+        .vuln-card {
+            border-radius: 14px;
+            overflow: hidden;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        .vuln-header {
+            padding: 18px 24px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .vuln-header.danger { background: #c0392b; }
+        .vuln-header.warning { background: #e67e22; }
+        .vuln-header .vuln-icon { font-size: 1.8rem; }
+        .vuln-header h3 { color: white; font-size: 1.05rem; font-weight: 700; }
+        .vuln-header p { color: rgba(255,255,255,0.75); font-size: 0.82rem; }
+        .vuln-body { background: white; padding: 24px; border: 1px solid var(--border); border-top: none; }
+        .vuln-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .vuln-col h4 { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+        .vuln-col.cause h4 { color: #c0392b; }
+        .vuln-col.fix h4 { color: #27ae60; }
+        .vuln-col p { font-size: 0.88rem; color: var(--subtext); }
+        .code-block {
+            background: #1e1e2e;
+            color: #cdd6f4;
+            border-radius: 10px;
+            padding: 18px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.78rem;
+            line-height: 1.6;
+            margin-top: 16px;
+            overflow-x: auto;
+        }
+        .code-block .comment { color: #6c7086; }
+        .code-block .keyword { color: #cba6f7; }
+        .code-block .string { color: #a6e3a1; }
+        .code-block .func { color: #89b4fa; }
+
+        /* ---- Future Threats ---- */
+        .future-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        .future-card {
+            background: white;
+            border-radius: 12px;
+            padding: 22px;
+            border-left: 4px solid var(--warning);
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        }
+        .future-card h4 { font-size: 0.92rem; font-weight: 700; margin-bottom: 6px; }
+        .future-card p { font-size: 0.85rem; color: var(--subtext); }
+
+        /* ---- Reflections ---- */
+        .reflection-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .reflection-card {
+            background: white;
+            border-radius: 14px;
+            padding: 26px;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+            border: 1px solid var(--border);
+        }
+        .reflection-card .rc-num {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: rgba(231,76,60,0.15);
+            line-height: 1;
+            margin-bottom: 10px;
+        }
+        .reflection-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
+        .reflection-card p { font-size: 0.88rem; color: var(--subtext); }
+
+        /* ---- Screenshot placeholder ---- */
+        .screenshot-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        .screenshot-box {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border-radius: 12px;
+            aspect-ratio: 16/9;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: rgba(255,255,255,0.4);
+            font-size: 0.85rem;
+            border: 1px solid rgba(255,255,255,0.1);
+            gap: 8px;
+        }
+        .screenshot-box .ss-icon { font-size: 2rem; }
+        .screenshot-caption {
+            text-align: center;
+            font-size: 0.78rem;
+            color: var(--subtext);
+            margin-top: 8px;
+            font-weight: 600;
+        }
+
+        /* ---- Footer ---- */
+        .footer {
+            background: var(--dark);
+            color: rgba(255,255,255,0.4);
+            text-align: center;
+            padding: 40px;
+            font-size: 0.82rem;
+        }
+
+        @media print {
+            .cover { min-height: auto; padding: 40px; }
+            .section { padding: 40px 30px; }
+            .cover h1 { font-size: 2.5rem; }
+        }
+        @media (max-width: 700px) {
+            .motivation-grid, .tech-grid, .cover-toc, .reflection-grid, .future-grid, .screenshot-grid, .vuln-row { grid-template-columns: 1fr; }
+            .cover h1 { font-size: 2.2rem; }
+            .section { padding: 50px 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ===== 封面 ===== -->
+<div class="cover">
+    <div class="cover-badge">Final Project · 成果報告書</div>
+    <h1>🐺 狼人殺線上版</h1>
+    <h2>Werewolf Game Online</h2>
+
+    <div class="cover-toc">
+        <div class="cover-toc-item"><span>💡</span>Motivation</div>
+        <div class="cover-toc-item"><span>🏗️</span>Design & Architecture</div>
+        <div class="cover-toc-item"><span>🔍</span>Similar Products</div>
+        <div class="cover-toc-item"><span>🖼️</span>Screenshots</div>
+        <div class="cover-toc-item"><span>🛡️</span>Security Report</div>
+        <div class="cover-toc-item"><span>💬</span>Reflections</div>
+    </div>
+
+    <div class="cover-meta">
+        <div class="cover-meta-item">
+            <div class="label">Tech Stack</div>
+            <div class="value">Node.js · Socket.io · HTML/CSS/JS</div>
+        </div>
+        <div class="cover-meta-item">
+            <div class="label">GitHub</div>
+            <div class="value">github.com/alvinlin1009-sys/werewolf-game</div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== 1. Motivation ===== -->
+<div class="section">
+    <div class="section-header">
+        <div class="num">01 · Motivation</div>
+        <h2>專案動機</h2>
+        <p>為什麼選擇開發線上版狼人殺？</p>
+    </div>
+
+    <div class="motivation-grid">
+        <div class="motivation-card">
+            <div class="icon">🎮</div>
+            <h3>經典桌遊數位化</h3>
+            <p>狼人殺是一款需要邏輯推理、心理博弈與社交互動的經典派對遊戲。將其數位化，能讓更多人突破地域限制一起同樂。</p>
+        </div>
+        <div class="motivation-card">
+            <div class="icon">⚙️</div>
+            <h3>技術深度挑戰</h3>
+            <p>開發狼人殺需要設計「有限狀態機 (FSM)」、處理即時多人同步 (WebSocket) 和複雜的遊戲邏輯，是一個絕佳的全端工程實作題材。</p>
+        </div>
+        <div class="motivation-card">
+            <div class="icon">🚀</div>
+            <h3>解決真實痛點</h3>
+            <p>市面上的狼人殺 APP 需要下載安裝和大量人數，門檻高。本專案希望做到「免安裝、開瀏覽器即玩、AI 機器人自動補數」的輕量化體驗。</p>
+        </div>
+    </div>
+</div>
+<div class="divider"></div>
+
+<!-- ===== 2. Design & Architecture ===== -->
+<div class="section">
+    <div class="section-header">
+        <div class="num">02 · Design & Architecture</div>
+        <h2>設計與架構</h2>
+        <p>系統設計的核心概念與技術選型</p>
+    </div>
+
+    <div class="tech-grid">
+        <div class="tech-card">
+            <div class="tech-icon">🌐</div>
+            <div class="tech-name">Frontend</div>
+            <div class="tech-desc">HTML5 + Vanilla CSS + JavaScript<br>無框架負擔，極致輕量</div>
+        </div>
+        <div class="tech-card">
+            <div class="tech-icon">⚡</div>
+            <div class="tech-name">Backend</div>
+            <div class="tech-desc">Node.js + Express<br>事件驅動架構，高效能</div>
+        </div>
+        <div class="tech-card">
+            <div class="tech-icon">🔌</div>
+            <div class="tech-name">Real-time 通訊</div>
+            <div class="tech-desc">Socket.io (WebSocket)<br>前後端即時雙向溝通</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>🔄 有限狀態機 (Finite State Machine)</h3>
+        <p style="margin-bottom: 16px; font-size: 0.88rem;">整個遊戲的核心是一組嚴謹的狀態機，每個狀態都有明確的「進入條件」與「觸發轉移的事件」，確保遊戲流程的正確性。</p>
+        <div class="fsm">
+            <div class="fsm-state">WAITING</div>
+            <div class="fsm-arrow">→</div>
+            <div class="fsm-state">NIGHT_WOLF</div>
+            <div class="fsm-arrow">→</div>
+            <div class="fsm-state">NIGHT_SEER</div>
+            <div class="fsm-arrow">→</div>
+            <div class="fsm-state">NIGHT_WITCH</div>
+            <div class="fsm-arrow">→</div>
+            <div class="fsm-state">DAY_ANNOUNCE</div>
+            <div class="fsm-arrow">→</div>
+            <div class="fsm-state">DAY_SPEECH</div>
+            <div class="fsm-arrow">→</div>
+            <div class="fsm-state">DAY_VOTE</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>🤖 AI 機器人系統</h3>
+        <ul>
+            <li>支援任意數量的 AI 機器人補位，解決玩家人數不足的問題。</li>
+            <li>機器人具備隨機發言（從預設語料庫中選取）、自動投票、自動執行特殊技能（女巫用藥、狼人殺人等）的能力。</li>
+            <li>狼人陣營中若有真人玩家，AI 機器人的決策以真人玩家的投票為主（多數決），避免 AI 搶奪決策權。</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h3>👑 房主權限系統</h3>
+        <p>第一位建立房間的玩家被標記為「房主 (Host)」。透過 <code>hostId</code> 欄位進行後端驗證，只有房主能加入機器人，防止其他玩家惡意干擾遊戲準備階段。</p>
+    </div>
+</div>
+<div class="divider"></div>
+
+<!-- ===== 3. Similar Products ===== -->
+<div class="section">
+    <div class="section-header">
+        <div class="num">03 · Similar Products Analyze</div>
+        <h2>競品分析</h2>
+        <p>與市面上同類型產品的功能比較</p>
+    </div>
+
+    <div class="card" style="padding: 0; overflow: hidden;">
+        <table class="compare-table">
+            <thead>
+                <tr>
+                    <th>比較項目</th>
+                    <th>市面狼人殺 APP（如：天黑請閉眼）</th>
+                    <th>🐺 本專案（線上版）</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><b>遊玩門檻</b></td>
+                    <td>高（需下載 APP、帳號登入）</td>
+                    <td>極低（瀏覽器打開、輸入暱稱即玩）</td>
+                </tr>
+                <tr>
+                    <td><b>人數需求</b></td>
+                    <td>必須湊滿 9 或 12 人</td>
+                    <td>彈性（1 人也可開局，AI 自動補位）</td>
+                </tr>
+                <tr>
+                    <td><b>資源佔用</b></td>
+                    <td>需安裝 APP，佔用大量儲存空間</td>
+                    <td>零安裝，純網頁運行</td>
+                </tr>
+                <tr>
+                    <td><b>延遲性</b></td>
+                    <td>需等待伺服器媒合與動畫</td>
+                    <td>極低延遲（WebSocket 即時推送）</td>
+                </tr>
+                <tr>
+                    <td><b>客製化彈性</b></td>
+                    <td>規則綁死，無法修改</td>
+                    <td>開源可擴充，角色規則隨時修改</td>
+                </tr>
+                <tr>
+                    <td><b>跨平台</b></td>
+                    <td>限定 iOS / Android</td>
+                    <td>任何有瀏覽器的裝置皆可使用</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+<div class="divider"></div>
+
+<!-- ===== 4. Screenshots ===== -->
+<div class="section">
+    <div class="section-header">
+        <div class="num">04 · Screenshots</div>
+        <h2>成果展示</h2>
+        <p>遊戲各階段的介面截圖</p>
+    </div>
+
+    <div class="screenshot-grid">
+        <div>
+            <div class="screenshot-box">
+                <div class="ss-icon">🏠</div>
+                <div>登入 / 建立房間畫面</div>
+            </div>
+            <div class="screenshot-caption">玩家輸入暱稱後可建立房間或以房號加入</div>
+        </div>
+        <div>
+            <div class="screenshot-box">
+                <div class="ss-icon">🤖</div>
+                <div>遊戲大廳（房主加人機）</div>
+            </div>
+            <div class="screenshot-caption">房主享有加入 AI 機器人的專屬權限</div>
+        </div>
+        <div>
+            <div class="screenshot-box">
+                <div class="ss-icon">🌙</div>
+                <div>夜晚行動介面</div>
+            </div>
+            <div class="screenshot-caption">狼人 / 預言家 / 女巫的暗黑模式專屬介面</div>
+        </div>
+        <div>
+            <div class="screenshot-box">
+                <div class="ss-icon">☀️</div>
+                <div>白天發言 / 投票介面</div>
+            </div>
+            <div class="screenshot-caption">即時聊天室、發言倒數、公開投票系統</div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-top: 20px; text-align: center; background: #f8f9fa;">
+        <p style="color: var(--subtext); font-size: 0.88rem;">📎 如需查看完整遊戲 Demo，請參閱 GitHub Repository：<br>
+        <a href="https://github.com/alvinlin1009-sys/werewolf-game" style="color: var(--accent);">github.com/alvinlin1009-sys/werewolf-game</a></p>
+    </div>
+</div>
+<div class="divider"></div>
+
+<!-- ===== 5. Security Report ===== -->
+<div style="background: #fafafa; padding: 1px 0;">
+<div class="section">
+    <div class="section-header">
+        <div class="num">05 · Security Report</div>
+        <h2>資安報告</h2>
+        <p>針對本專案提出的資安見解：漏洞發現、成因分析與解決方案</p>
+    </div>
+
+    <h3 style="margin-bottom: 16px; font-size: 1rem; color: var(--subtext); text-transform: uppercase; letter-spacing: 1px;">✅ 已修復漏洞</h3>
+
+    <!-- 漏洞一 -->
+    <div class="vuln-card">
+        <div class="vuln-header danger">
+            <div class="vuln-icon">🔓</div>
+            <div>
+                <h3>漏洞一：全圖透視外掛 (Information Leakage)</h3>
+                <p>嚴重程度：高 (High) · OWASP A02: Cryptographic Failures</p>
+            </div>
+        </div>
+        <div class="vuln-body">
+            <div class="vuln-row">
+                <div class="vuln-col cause">
+                    <h4>⚠️ 成因 (Root Cause)</h4>
+                    <p>原先伺服器在每次廣播時，會將完整的 <code>room</code> 物件直接傳給房間內的所有 Socket 連線。這個物件包含了所有玩家的真實身分 (<code>role</code>)、狼人夜間的擊殺目標 (<code>nightKilled</code>)，以及狼人頻道內部的投票紀錄 (<code>wolfVotes</code>)。</p>
+                    <br>
+                    <p>懂技術的玩家只需在瀏覽器按下 <b>F12</b> → Network 面板 → 監聽 WebSocket 封包，即可在不影響遊戲的情況下，實時查閱所有人的底牌，進行作弊。</p>
+                </div>
+                <div class="vuln-col fix">
+                    <h4>🛡️ 解決方案 (Solution)</h4>
+                    <p>廢除全局廣播機制，改實作「<b>視角過濾器 (Perspective Filter)</b>」函數 <code>getPlayerSpecificState(room, playerId)</code>。</p>
+                    <br>
+                    <p>伺服器在傳送狀態更新時，會針對每位玩家的 <code>socket.id</code> 單獨呼叫此函數，確保：</p>
+                    <ul style="padding-left: 18px; font-size: 0.88rem; color: var(--subtext); margin-top: 8px;">
+                        <li>其他玩家的 <code>role</code> 強制覆蓋為 <code>null</code>。</li>
+                        <li>僅狼人能看到隊友身分。</li>
+                        <li>遊戲結束前，<code>nightKilled</code> 等敏感欄位徹底從傳送的封包中刪除。</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="code-block">
+<span class="comment">// 修復後的視角過濾器核心邏輯 (server.js)</span>
+<br><span class="keyword">const</span> <span class="func">getPlayerSpecificState</span> = (room, playerId) => {
+<br>    <span class="keyword">const</span> safeRoom = { ...room };
+<br>
+<br>    <span class="keyword">if</span> (safeRoom.status !== STATUS.GAMEOVER) {
+<br>        <span class="comment">// 刪除所有夜間敏感資料</span>
+<br>        <span class="keyword">delete</span> safeRoom.nightKilled;
+<br>        <span class="keyword">delete</span> safeRoom.wolfVotes;
+<br>
+<br>        <span class="comment">// 對每個玩家進行身分遮蔽</span>
+<br>        safeRoom.players = safeRoom.players.<span class="func">map</span>(p => {
+<br>            <span class="keyword">const</span> isSelf = p.id === playerId;
+<br>            <span class="keyword">const</span> isWolfTeam = requestingRole === ROLES.WEREWOLF && p.role === ROLES.WEREWOLF;
+<br>            <span class="keyword">if</span> (!isSelf && !isWolfTeam) <span class="keyword">return</span> { ...p, role: <span class="string">null</span> };
+<br>            <span class="keyword">return</span> p;
+<br>        });
+<br>    }
+<br>    <span class="keyword">return</span> safeRoom;
+<br>};
+            </div>
+        </div>
+    </div>
+
+    <!-- 漏洞二 -->
+    <div class="vuln-card">
+        <div class="vuln-header warning">
+            <div class="vuln-icon">🔢</div>
+            <div>
+                <h3>漏洞二：房號暴力破解亂入 (Brute-force Joining)</h3>
+                <p>嚴重程度：中 (Medium) · OWASP A07: Identification and Authentication Failures</p>
+            </div>
+        </div>
+        <div class="vuln-body">
+            <div class="vuln-row">
+                <div class="vuln-col cause">
+                    <h4>⚠️ 成因 (Root Cause)</h4>
+                    <p>原先房間代碼僅由 4 碼英數字組合而成，其可能的組合總數約為 36⁴ = <b>167 萬種</b>。</p>
+                    <br>
+                    <p>惡意使用者可輕易撰寫腳本，在短時間內遍歷大量組合，找到正在等待玩家的房間，塞入幽靈帳號或機器人，干擾正常遊戲的準備流程，並對伺服器造成額外負載。</p>
+                </div>
+                <div class="vuln-col fix">
+                    <h4>🛡️ 解決方案 (Solution)</h4>
+                    <p>將房間代碼的長度由 <b>4 碼</b>提升至 <b>6 碼</b>，組合數從 167 萬種大幅躍升至 36⁶ = <b>21.7 億種</b>，暴力破解的難度呈指數級增長。</p>
+                    <br>
+                    <p>同時，前端的輸入框 <code>maxlength</code> 屬性也同步更新為 6，確保前後端驗證一致。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 漏洞三（原本就安全） -->
+    <div class="vuln-card">
+        <div class="vuln-header" style="background: var(--success);">
+            <div class="vuln-icon">✅</div>
+            <div>
+                <h3>評估三：跨站腳本攻擊 (XSS) — 已防範</h3>
+                <p>嚴重程度：已緩解 (Mitigated) · OWASP A03: Injection</p>
+            </div>
+        </div>
+        <div class="vuln-body">
+            <div class="vuln-row">
+                <div class="vuln-col cause">
+                    <h4>⚠️ 潛在風險說明</h4>
+                    <p>若玩家在聊天室輸入惡意程式碼（如 <code>&lt;script&gt;alert('XSS')&lt;/script&gt;</code>），且前端使用 <code>innerHTML</code> 進行渲染，則該程式碼會在所有玩家的瀏覽器上執行，可能用於竊取 Cookie 或發動釣魚攻擊。</p>
+                </div>
+                <div class="vuln-col fix">
+                    <h4>🛡️ 現有防護</h4>
+                    <p>本專案前端的 <code>addLog()</code> 函數使用 <b><code>innerText</code></b> 而非 <code>innerHTML</code> 進行文字渲染。<code>innerText</code> 會自動將所有 HTML 標籤轉義為純文字，從根本上阻斷了 XSS 攻擊的注入途徑。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h3 style="margin: 32px 0 16px; font-size: 1rem; color: var(--subtext); text-transform: uppercase; letter-spacing: 1px;">🔮 未來潛在風險（建議改善）</h3>
+
+    <div class="future-grid">
+        <div class="future-card">
+            <h4>⚠️ 缺乏玩家身分驗證 (No Auth)</h4>
+            <p>目前玩家僅憑暱稱加入遊戲，無法防止多開帳號或惡意冒名。斷線後因 <code>socket.id</code> 改變，也無法重連到原本座位。建議未來導入 <b>UUID Token</b> 存放於 <code>localStorage</code>，實現斷線重連。</p>
+        </div>
+        <div class="future-card">
+            <h4>⚠️ 缺乏速率限制 (No Rate Limiting)</h4>
+            <p>目前伺服器對 Socket 事件沒有速率限制，惡意客戶端可在短時間內大量發送 <code>game_action</code> 事件，對伺服器造成 DoS 攻擊。建議使用 <b>socket.io-limiter</b> 等套件進行每秒事件頻率的限制。</p>
+        </div>
+        <div class="future-card">
+            <h4>⚠️ 缺乏 HTTPS 加密</h4>
+            <p>目前在本機運行時為 HTTP，若部署在不支援 HTTPS 的環境下，傳輸的所有封包（含玩家暱稱與遊戲事件）理論上可被中間人 (Man-in-the-Middle) 攔截。正式部署應搭配 <b>SSL/TLS 憑證</b>（如 Let's Encrypt）。</p>
+        </div>
+        <div class="future-card">
+            <h4>⚠️ 伺服器端缺乏輸入驗證 (Input Validation)</h4>
+            <p>目前伺服器對 <code>game_action</code> 的 <code>target</code> 參數雖有基本的 <code>isNaN</code> 檢查，但缺乏更嚴格的範圍驗證（如確認目標 seat 值是否在合法玩家座位範圍內），可能被構造的異常輸入利用。</p>
+        </div>
+    </div>
+</div>
+</div>
+<div class="divider"></div>
+
+<!-- ===== 6. Reflections ===== -->
+<div class="section">
+    <div class="section-header">
+        <div class="num">06 · Reflections</div>
+        <h2>心得與反思</h2>
+        <p>開發過程中的挑戰、學習與未來展望</p>
+    </div>
+
+    <div class="reflection-grid">
+        <div class="reflection-card">
+            <div class="rc-num">01</div>
+            <h3>狀態同步是最大的挑戰</h3>
+            <p>開發過程中，最困難的部分是確保所有玩家的畫面與伺服器狀態嚴格保持一致。我們曾遭遇計時器 (<code>setTimeout</code>) 被序列化進 Socket 封包，導致 <code>RangeError: Maximum call stack size exceeded</code> 的嚴重崩潰。這讓我學到在傳送資料前必須先進行「安全狀態淨化」，排除無法被 JSON 序列化的物件。</p>
+        </div>
+        <div class="reflection-card">
+            <div class="rc-num">02</div>
+            <h3>「後端永遠不要信任前端」</h3>
+            <p>在實作視角過濾器時，我深刻體會到這個資安原則。遊戲邏輯如果只靠「前端不顯示」來隱藏資訊，在封包層面依然是透明的。真正有效的資訊保護，必須從「伺服器端決定傳什麼」開始，而不是「客戶端決定顯示什麼」。</p>
+        </div>
+        <div class="reflection-card">
+            <div class="rc-num">03</div>
+            <h3>即時遊戲的時序設計</h3>
+            <p>遊戲中有大量倒數計時與「等待所有人完成動作」的邏輯（如：狼人全部投票後立刻結束夜晚）。設計這些流程讓我深刻理解了「非同步程式設計」與「競態條件 (Race Condition)」的實際挑戰，也讓我更加熟悉 Node.js 的事件循環機制。</p>
+        </div>
+        <div class="reflection-card">
+            <div class="rc-num">04</div>
+            <h3>未來展望</h3>
+            <p>目前的系統已具備良好的基礎架構。未來計畫加入：① JWT 認證機制（實現斷線重連）、② WebRTC 語音功能（更接近桌遊體驗）、③ 更多神職角色（白痴、守衛等）、④ 聊天訊息的速率限制，以及 ⑤ 將遊戲正式部署至雲端平台（如 Render 或 Railway）供大眾使用。</p>
+        </div>
+    </div>
+</div>
+
+<!-- ===== Footer ===== -->
+<div class="footer">
+    <p>🐺 狼人殺線上版 · Final Project · Node.js + Socket.io</p>
+    <p style="margin-top: 8px;">GitHub: <a href="https://github.com/alvinlin1009-sys/werewolf-game" style="color: #e74c3c;">github.com/alvinlin1009-sys/werewolf-game</a></p>
+</div>
+
+</body>
+</html>
