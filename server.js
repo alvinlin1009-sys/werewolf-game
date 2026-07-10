@@ -180,15 +180,18 @@ const startSeerPhase = (room) => {
     
     transitionTo(room, STATUS.NIGHT_SEER, "預言家請睜眼，請選擇要查驗的玩家。");
 
-    setTimeout(() => {
+    room.seerTimeout = setTimeout(() => {
         if (room.status !== STATUS.NIGHT_SEER) return;
         startWitchPhase(room);
     }, phaseDuration);
 };
 
 const promptWitchPoison = (room, witch) => {
-    if (room.witchHasPoison) {
+    if (room.witchHasPoison && !room.witchUsedPotionThisNight) {
         sendToPlayer(witch.id, { type: 'WITCH_PROMPT', msg: "毒殺玩家請輸入: poison [號碼]\n不使用請輸入: poison 0" });
+    } else {
+        if (room.witchTimeout) clearTimeout(room.witchTimeout);
+        startDayPhase(room);
     }
 };
 
@@ -226,7 +229,7 @@ const startWitchPhase = (room) => {
         }
     }
 
-    setTimeout(() => {
+    room.witchTimeout = setTimeout(() => {
         if (room.status !== STATUS.NIGHT_WITCH) return;
         startDayPhase(room);
     }, phaseDuration);
@@ -570,6 +573,8 @@ io.on('connection', (socket) => {
             if (room.status !== STATUS.NIGHT_SEER || player.role !== ROLES.SEER) return sendToPlayer(socket.id, { error: "現在不是預言家驗人階段！" });
             const targetPlayer = room.players.find(p => p.seat === parseInt(target));
             sendToPlayer(socket.id, { msg: `查驗結果：${target} 號玩家的真實身分是 ${targetPlayer?.role === ROLES.WEREWOLF ? '狼人 🐺' : '好人 🧑'}` });
+            if (room.seerTimeout) clearTimeout(room.seerTimeout);
+            setTimeout(() => startWitchPhase(room), 2000);
         } else if (cmd === 'save') {
             if (room.status !== STATUS.NIGHT_WITCH || player.role !== ROLES.WITCH) return sendToPlayer(socket.id, { error: "現在不是女巫階段！" });
             let usedSave = false;
@@ -594,6 +599,8 @@ io.on('connection', (socket) => {
             } else if (parseInt(target) === 0) {
                 sendToPlayer(socket.id, { msg: "你選擇不使用毒藥。" });
             }
+            if (room.witchTimeout) clearTimeout(room.witchTimeout);
+            setTimeout(() => startDayPhase(room), 2000);
         } else if (cmd === 'vote') {
             if (room.status !== STATUS.DAY_VOTE) return sendToPlayer(socket.id, { error: "現在不是投票階段！如果你正在發言，請先點擊「結束發言」。" });
             if (!target || isNaN(parseInt(target))) return sendToPlayer(socket.id, { error: "無效的目標玩家號碼！請輸入 vote [號碼]" });
