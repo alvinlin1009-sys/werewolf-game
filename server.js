@@ -111,6 +111,7 @@ const initGame = (room) => {
 const resolveWolfVote = (room) => {
     if (room.status !== STATUS.NIGHT_WOLF) return;
     if (room.wolfTimeout) clearTimeout(room.wolfTimeout);
+    room.status = STATUS.RESOLVING_VOTE;
     
     const humanWolves = room.players.filter(p => p.role === ROLES.WEREWOLF && p.isAlive && !p.isBot).map(p => p.seat);
     const botWolves = room.players.filter(p => p.role === ROLES.WEREWOLF && p.isAlive && p.isBot).map(p => p.seat);
@@ -411,6 +412,7 @@ const startSpeechPhase = (room) => {
 const resolveDayVote = (room) => {
     if (room.status !== STATUS.DAY_VOTE) return;
     if (room.voteTimeout) clearTimeout(room.voteTimeout);
+    room.status = 'RESOLVING_VOTE';
 
     const voteCounts = {};
     Object.values(room.votes).forEach(target => { voteCounts[target] = (voteCounts[target] || 0) + 1; });
@@ -552,7 +554,9 @@ io.on('connection', (socket) => {
         const player = room.players.find(p => p.id === socket.id);
         if (!player || !player.isAlive) return;
         const { cmd, target } = data;
-        if (cmd === 'kill' && room.status === STATUS.NIGHT_WOLF && player.role === ROLES.WEREWOLF) {
+        
+        if (cmd === 'kill') {
+            if (room.status !== STATUS.NIGHT_WOLF || player.role !== ROLES.WEREWOLF) return sendToPlayer(socket.id, { error: "現在不是狼人殺人階段！" });
             room.wolfVotes[player.seat] = parseInt(target);
             const wolfIds = room.players.filter(p => p.role === ROLES.WEREWOLF).map(p => p.id);
             wolfIds.forEach(id => {
@@ -562,10 +566,12 @@ io.on('connection', (socket) => {
             if (Object.keys(room.wolfVotes).length >= aliveWolves) {
                 resolveWolfVote(room);
             }
-        } else if (cmd === 'check' && room.status === STATUS.NIGHT_SEER && player.role === ROLES.SEER) {
+        } else if (cmd === 'check') {
+            if (room.status !== STATUS.NIGHT_SEER || player.role !== ROLES.SEER) return sendToPlayer(socket.id, { error: "現在不是預言家驗人階段！" });
             const targetPlayer = room.players.find(p => p.seat === parseInt(target));
             sendToPlayer(socket.id, { msg: `查驗結果：${target} 號玩家的真實身分是 ${targetPlayer?.role === ROLES.WEREWOLF ? '狼人 🐺' : '好人 🧑'}` });
-        } else if (cmd === 'save' && room.status === STATUS.NIGHT_WITCH && player.role === ROLES.WITCH) {
+        } else if (cmd === 'save') {
+            if (room.status !== STATUS.NIGHT_WITCH || player.role !== ROLES.WITCH) return sendToPlayer(socket.id, { error: "現在不是女巫階段！" });
             let usedSave = false;
             if (parseInt(target) === 1 && room.witchHasSave) { 
                 room.nightKilled = null; 
@@ -576,14 +582,10 @@ io.on('connection', (socket) => {
             } else if (parseInt(target) === 0) {
                 sendToPlayer(socket.id, { msg: "你選擇不使用解藥。" });
             }
-            if (!usedSave) {
-                promptWitchPoison(room, player);
-            }
-        } else if (cmd === 'poison' && room.status === STATUS.NIGHT_WITCH && player.role === ROLES.WITCH) {
-            if (room.witchUsedPotionThisNight) {
-                sendToPlayer(socket.id, { error: "你今晚已經使用過解藥，無法再使用毒藥！" });
-                return;
-            }
+            if (!usedSave) promptWitchPoison(room, player);
+        } else if (cmd === 'poison') {
+            if (room.status !== STATUS.NIGHT_WITCH || player.role !== ROLES.WITCH) return sendToPlayer(socket.id, { error: "現在不是女巫階段！" });
+            if (room.witchUsedPotionThisNight) return sendToPlayer(socket.id, { error: "你今晚已經使用過解藥，無法再使用毒藥！" });
             if (parseInt(target) !== 0 && room.witchHasPoison) { 
                 room.nightPoisoned = parseInt(target); 
                 room.witchHasPoison = false; 
@@ -592,15 +594,15 @@ io.on('connection', (socket) => {
             } else if (parseInt(target) === 0) {
                 sendToPlayer(socket.id, { msg: "你選擇不使用毒藥。" });
             }
-        } else if (cmd === 'vote' && room.status === STATUS.DAY_VOTE) {
+        } else if (cmd === 'vote') {
+            if (room.status !== STATUS.DAY_VOTE) return sendToPlayer(socket.id, { error: "現在不是投票階段！如果你正在發言，請先點擊「結束發言」。" });
+            if (!target || isNaN(parseInt(target))) return sendToPlayer(socket.id, { error: "無效的目標玩家號碼！請輸入 vote [號碼]" });
             room.votes[player.seat] = parseInt(target);
             broadcast(room, `${player.seat} 號玩家投票給了 ${target} 號`);
-            
             const aliveCount = room.players.filter(p => p.isAlive).length;
-            if (Object.keys(room.votes).length >= aliveCount) {
-                resolveDayVote(room);
-            }
-        } else if (cmd === 'shoot' && player.role === ROLES.HUNTER) {
+            if (Object.keys(room.votes).length >= aliveCount) resolveDayVote(room);
+        } else if (cmd === 'shoot') {
+            if (player.role !== ROLES.HUNTER) return;
             if (room.hunterShootTimeout) {
                 clearTimeout(room.hunterShootTimeout);
                 room.hunterShootTimeout = null;
