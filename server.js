@@ -234,6 +234,7 @@ const startWitchPhase = (room) => {
 const startDayPhase = (room) => {
     room.dayCount++;
     transitionTo(room, STATUS.DAY_ANNOUNCE, `第 ${room.dayCount} 天天亮了...`);
+    room.lastWordsQueue = [];
     let deadThisNight = [];
     let hunterToShoot = null;
     let deadPlayers = [];
@@ -375,6 +376,11 @@ const startSpeechPhase = (room) => {
         if (room.status !== STATUS.DAY_SPEECH) return;
         const current = alivePlayers[speakerIdx];
         if (!current) return;
+        
+        room.currentSpeaker = current.seat;
+        room.phaseEndTime = Date.now() + 45000;
+        broadcast(room, `現在輪到 ${current.seat} 號玩家 (${current.name}) 發言。(45秒)`);
+
         if (current.isBot) {
             await new Promise(res => setTimeout(res, 2000));
             if (room.status === STATUS.DAY_SPEECH && room.currentSpeaker === current.seat) {
